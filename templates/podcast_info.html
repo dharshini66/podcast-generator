@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ podcast.title }} - AI Podcast Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>AI Podcast Generator</h1>
+        <p>Podcast Information</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>{{ podcast.title }}</h2>
+            <p>Generated: {{ podcast.date }}</p>
+            
+            {% if podcast.audio_file %}
+            <div>
+                <h3>Podcast Audio</h3>
+                <audio controls class="audio-player">
+                    <source src="{{ url_for('download_podcast', filename=podcast.audio_file) }}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <p><a href="{{ url_for('download_podcast', filename=podcast.audio_file) }}">Download Audio</a></p>
+            </div>
+            {% endif %}
+            
+            <div>
+                <h3>Intro</h3>
+                <p>{{ podcast.intro }}</p>
+            </div>
+            
+            <div>
+                <h3>Key Points</h3>
+                <ol>
+                    {% for point in podcast.key_points %}
+                    <li>
+                        <strong>{{ point.title }}</strong>
+                        <p>{{ point.text }}</p>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </div>
+            
+            <div>
+                <h3>Outro</h3>
+                <p>{{ podcast.outro }}</p>
+            </div>
+        </div>
+        
+        <p><a href="{{ url_for('index') }}">&larr; Back to Home</a></p>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 AI Podcast Generator</p>
+    </footer>
+</body>
+</html>

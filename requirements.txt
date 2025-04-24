@@ -1,0 +1,15 @@
+flask>=2.3.3
+python-dotenv>=1.0.0
+requests>=2.31.0
+numpy>=1.24.0
+pydub>=0.25.1
+streamlit>=1.24.0
+assemblyai>=0.17.0
+ffmpeg-python>=0.2.0
+elevenlabs>=0.2.24
+google-cloud-texttospeech>=2.14.1
+streamlit-player>=0.1.5
+watchdog>=3.0.0
+matplotlib>=3.7.2
+streamlit-option-menu>=0.3.2
+pillow>=9.5.0
