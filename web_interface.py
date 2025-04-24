@@ -18,10 +18,12 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 templates_dir = os.path.join(os.getcwd(), 'templates')
 os.makedirs(templates_dir, exist_ok=True)
 
-# Create static directory for CSS
+# Create static directory for CSS and JS
 static_dir = os.path.join(os.getcwd(), 'static')
 css_dir = os.path.join(static_dir, 'css')
+js_dir = os.path.join(static_dir, 'js')
 os.makedirs(css_dir, exist_ok=True)
+os.makedirs(js_dir, exist_ok=True)
 
 # Write CSS file
 with open(os.path.join(css_dir, 'style.css'), 'w') as f:
@@ -155,65 +157,201 @@ with open(os.path.join(templates_dir, 'index.html'), 'w') as f:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Podcast Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1>AI Podcast Generator</h1>
-        <p>Upload meeting recordings and generate podcast snippets</p>
+        <h1><i class="fas fa-podcast"></i> AI Podcast Generator</h1>
+        <p>Transform meeting recordings into professional podcast snippets</p>
     </header>
 
     <div class="container">
         {% if message %}
         <div class="alert {% if success %}alert-success{% else %}alert-danger{% endif %}">
+            {% if success %}
+            <i class="fas fa-check-circle"></i>
+            {% else %}
+            <i class="fas fa-exclamation-circle"></i>
+            {% endif %}
             {{ message }}
         </div>
         {% endif %}
 
         <div class="card">
-            <h2>Upload Audio</h2>
-            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+            <h2><i class="fas fa-microphone-alt"></i> Create New Podcast</h2>
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="podcast-form">
                 <div class="form-group">
                     <label for="file">Audio File (MP3 or WAV):</label>
-                    <input type="file" id="file" name="file" accept=".mp3,.wav" required>
+                    <div class="file-input-wrapper">
+                        <div class="file-input-button">
+                            <i class="fas fa-cloud-upload-alt"></i> Choose an audio file or drag it here
+                        </div>
+                        <input type="file" id="file" name="file" accept=".mp3,.wav" required>
+                    </div>
+                    <div class="file-name" id="file-name"></div>
                 </div>
+                
                 <div class="form-group">
-                    <label for="title">Podcast Title (optional):</label>
+                    <label for="title">Podcast Title:</label>
                     <input type="text" id="title" name="title" placeholder="Enter a title for your podcast">
                 </div>
-                <button type="submit">Generate Podcast</button>
+                
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label for="voice">AI Voice:</label>
+                        <select id="voice" name="voice">
+                            <option value="default">Default Voice</option>
+                            <option value="male">Male Voice</option>
+                            <option value="female">Female Voice</option>
+                            <option value="british">British Accent</option>
+                            <option value="american">American Accent</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="segments">Key Segments:</label>
+                        <select id="segments" name="segments">
+                            <option value="3">3 Segments</option>
+                            <option value="5" selected>5 Segments</option>
+                            <option value="7">7 Segments</option>
+                            <option value="10">10 Segments</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="style">Podcast Style:</label>
+                        <select id="style" name="style">
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="energetic">Energetic</option>
+                            <option value="calm">Calm</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="add_music" value="yes"> 
+                        Add background music
+                    </label>
+                </div>
+                
+                <button type="submit" id="generate-button">
+                    <i class="fas fa-magic"></i> Generate Podcast
+                </button>
             </form>
+            
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Generating your podcast...</div>
+                <div class="visualization">
+                    <div class="visualization-bars">
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                        <div class="visualization-bar"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card">
-            <h2>Generated Podcasts</h2>
+            <h2><i class="fas fa-headphones"></i> Your Podcasts</h2>
             {% if podcasts %}
             <ul class="podcast-list">
                 {% for podcast in podcasts %}
                 <li class="podcast-item">
                     <h3>{{ podcast.title }}</h3>
-                    <p>Generated: {{ podcast.date }}</p>
-                    <p>
-                        <a href="{{ url_for('view_podcast', filename=podcast.info_file) }}">View Podcast Info</a>
+                    <div class="podcast-meta">
+                        <span class="date">{{ podcast.date }}</span>
+                    </div>
+                    <div class="podcast-actions">
+                        <a href="{{ url_for('view_podcast', filename=podcast.info_file) }}" class="view">
+                            <i class="fas fa-file-alt"></i> View Details
+                        </a>
                         {% if podcast.audio_file %}
-                        | <a href="{{ url_for('download_podcast', filename=podcast.audio_file) }}">Download Audio</a>
-                        <audio controls class="audio-player">
-                            <source src="{{ url_for('download_podcast', filename=podcast.audio_file) }}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
+                        <a href="{{ url_for('download_podcast', filename=podcast.audio_file) }}" class="download">
+                            <i class="fas fa-download"></i> Download
+                        </a>
                         {% endif %}
-                    </p>
+                    </div>
+                    {% if podcast.audio_file %}
+                    <audio controls class="audio-player">
+                        <source src="{{ url_for('download_podcast', filename=podcast.audio_file) }}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>
             {% else %}
-            <p>No podcasts generated yet.</p>
+            <p class="no-podcasts"><i class="fas fa-info-circle"></i> No podcasts generated yet. Create your first one!</p>
             {% endif %}
         </div>
     </div>
 
     <footer>
-        <p>&copy; 2025 AI Podcast Generator</p>
+        <p>&copy; 2025 AI Podcast Generator | Powered by AssemblyAI & ElevenLabs</p>
     </footer>
+    
+    <div class="theme-toggle" id="theme-toggle">
+        <span class="theme-toggle-icon">
+            <i class="fas fa-moon"></i>
+        </span>
+    </div>
+
+    <script>
+        // File input handling
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('file-name');
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                fileName.textContent = this.files[0].name;
+            } else {
+                fileName.textContent = '';
+            }
+        });
+        
+        // Form submission and loading animation
+        const form = document.getElementById('podcast-form');
+        const loading = document.getElementById('loading');
+        const generateButton = document.getElementById('generate-button');
+        
+        form.addEventListener('submit', function() {
+            if (fileInput.files && fileInput.files[0]) {
+                loading.style.display = 'block';
+                generateButton.disabled = true;
+            }
+        });
+        
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = themeToggle.querySelector('i');
+        let lightMode = false;
+        
+        themeToggle.addEventListener('click', function() {
+            if (lightMode) {
+                document.documentElement.style.setProperty('--dark-bg', '#121212');
+                document.documentElement.style.setProperty('--dark-card', '#1e1e1e');
+                document.documentElement.style.setProperty('--dark-text', '#e0e0e0');
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                document.documentElement.style.setProperty('--dark-bg', '#f8f9fa');
+                document.documentElement.style.setProperty('--dark-card', '#ffffff');
+                document.documentElement.style.setProperty('--dark-text', '#333333');
+                themeIcon.className = 'fas fa-sun';
+            }
+            lightMode = !lightMode;
+        });
+    </script>
 </body>
 </html>
 """)
@@ -226,62 +364,156 @@ with open(os.path.join(templates_dir, 'podcast_info.html'), 'w') as f:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ podcast.title }} - AI Podcast Generator</title>
+    <title>{{ podcast.title }} - Podcast Details</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1>AI Podcast Generator</h1>
-        <p>Podcast Information</p>
+        <h1><i class="fas fa-podcast"></i> AI Podcast Generator</h1>
+        <p>Podcast Details</p>
     </header>
 
     <div class="container">
         <div class="card">
-            <h2>{{ podcast.title }}</h2>
-            <p>Generated: {{ podcast.date }}</p>
+            <h2><i class="fas fa-info-circle"></i> {{ podcast.title }}</h2>
+            
+            <div class="podcast-meta">
+                <span class="date">{{ podcast.date }}</span>
+            </div>
             
             {% if podcast.audio_file %}
-            <div>
-                <h3>Podcast Audio</h3>
+            <div class="audio-section">
+                <h3><i class="fas fa-headphones"></i> Listen</h3>
                 <audio controls class="audio-player">
                     <source src="{{ url_for('download_podcast', filename=podcast.audio_file) }}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
-                <p><a href="{{ url_for('download_podcast', filename=podcast.audio_file) }}">Download Audio</a></p>
+                <div class="podcast-actions">
+                    <a href="{{ url_for('download_podcast', filename=podcast.audio_file) }}" class="download">
+                        <i class="fas fa-download"></i> Download Audio
+                    </a>
+                </div>
             </div>
             {% endif %}
             
-            <div>
-                <h3>Intro</h3>
-                <p>{{ podcast.intro }}</p>
-            </div>
-            
-            <div>
-                <h3>Key Points</h3>
-                <ol>
-                    {% for point in podcast.key_points %}
-                    <li>
-                        <strong>{{ point.title }}</strong>
-                        <p>{{ point.text }}</p>
-                    </li>
-                    {% endfor %}
-                </ol>
-            </div>
-            
-            <div>
-                <h3>Outro</h3>
-                <p>{{ podcast.outro }}</p>
+            <div class="podcast-content">
+                <h3><i class="fas fa-align-left"></i> Content</h3>
+                
+                {% if podcast.intro %}
+                <div class="content-section">
+                    <h4>Introduction</h4>
+                    <p>{{ podcast.intro }}</p>
+                </div>
+                {% endif %}
+                
+                {% if podcast.key_points %}
+                <div class="content-section">
+                    <h4>Key Points</h4>
+                    <ol>
+                        {% for point in podcast.key_points %}
+                        <li>{{ point }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                {% endif %}
+                
+                {% if podcast.outro %}
+                <div class="content-section">
+                    <h4>Conclusion</h4>
+                    <p>{{ podcast.outro }}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
         
-        <p><a href="{{ url_for('index') }}">&larr; Back to Home</a></p>
+        <div class="back-link">
+            <a href="{{ url_for('index') }}"><i class="fas fa-arrow-left"></i> Back to Podcasts</a>
+        </div>
     </div>
 
     <footer>
-        <p>&copy; 2025 AI Podcast Generator</p>
+        <p>&copy; 2025 AI Podcast Generator | Powered by AssemblyAI & ElevenLabs</p>
     </footer>
+    
+    <div class="theme-toggle" id="theme-toggle">
+        <span class="theme-toggle-icon">
+            <i class="fas fa-moon"></i>
+        </span>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = themeToggle.querySelector('i');
+        let lightMode = false;
+        
+        themeToggle.addEventListener('click', function() {
+            if (lightMode) {
+                document.documentElement.style.setProperty('--dark-bg', '#121212');
+                document.documentElement.style.setProperty('--dark-card', '#1e1e1e');
+                document.documentElement.style.setProperty('--dark-text', '#e0e0e0');
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                document.documentElement.style.setProperty('--dark-bg', '#f8f9fa');
+                document.documentElement.style.setProperty('--dark-card', '#ffffff');
+                document.documentElement.style.setProperty('--dark-text', '#333333');
+                themeIcon.className = 'fas fa-sun';
+            }
+            lightMode = !lightMode;
+        });
+    </script>
 </body>
 </html>
+""")
+
+# Create JavaScript file for additional functionality
+with open(os.path.join(js_dir, 'main.js'), 'w') as f:
+    f.write("""
+// File input handling
+const fileInput = document.getElementById('file');
+const fileName = document.getElementById('file-name');
+
+fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        fileName.textContent = this.files[0].name;
+    } else {
+        fileName.textContent = '';
+    }
+});
+
+// Form submission and loading animation
+const form = document.getElementById('podcast-form');
+const loading = document.getElementById('loading');
+const generateButton = document.getElementById('generate-button');
+
+form.addEventListener('submit', function() {
+    if (fileInput.files && fileInput.files[0]) {
+        loading.style.display = 'block';
+        generateButton.disabled = true;
+    }
+});
+
+// Theme toggle functionality
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = themeToggle.querySelector('i');
+let lightMode = false;
+
+themeToggle.addEventListener('click', function() {
+    if (lightMode) {
+        document.documentElement.style.setProperty('--dark-bg', '#121212');
+        document.documentElement.style.setProperty('--dark-card', '#1e1e1e');
+        document.documentElement.style.setProperty('--dark-text', '#e0e0e0');
+        themeIcon.className = 'fas fa-moon';
+    } else {
+        document.documentElement.style.setProperty('--dark-bg', '#f8f9fa');
+        document.documentElement.style.setProperty('--dark-card', '#ffffff');
+        document.documentElement.style.setProperty('--dark-text', '#333333');
+        themeIcon.className = 'fas fa-sun';
+    }
+    lightMode = !lightMode;
+});
 """)
 
 def allowed_file(filename):
@@ -413,14 +645,26 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
             file.save(file_path)
             
-            # Get the title (if provided)
+            # Get the form parameters
             title = request.form.get('title', '').strip()
             if not title:
                 title = os.path.splitext(filename)[0]
             
-            # Generate the podcast
+            voice = request.form.get('voice', 'default')
+            segments = int(request.form.get('segments', 5))
+            style = request.form.get('style', 'professional')
+            add_music = request.form.get('add_music') == 'yes'
+            
+            # Generate the podcast with the selected options
             generator = PodcastGenerator()
-            result = generator.generate_podcast(file_path, title)
+            result = generator.generate_podcast(
+                file_path, 
+                title,
+                max_points=segments,
+                voice_style=voice,
+                podcast_style=style,
+                add_background_music=add_music
+            )
             
             if result and result.get('info'):
                 return render_template('index.html', 
